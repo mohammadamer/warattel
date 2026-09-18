@@ -1,0 +1,13 @@
+{
+  "name": "warattel",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/mobile"
+  ],
+  "scripts": {
+    "mobile:start": "npm --workspace apps/mobile start",
+    "mobile:android": "npm --workspace apps/mobile android",
+    "mobile:ios": "npm --workspace apps/mobile ios"
+  }
+}

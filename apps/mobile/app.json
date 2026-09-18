@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Warattel",
+    "slug": "warattel",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Warattel to record your recitation for feedback."
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.warattel.app"
+    },
+    "experiments": {
+      "tsconfigPaths": true
+    }
+  }
+}

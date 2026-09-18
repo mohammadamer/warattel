@@ -1,0 +1,33 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "npm install": true,
+        "npx tsc": true,
+        "npx expo": true,
+        "/^cd /workspaces/warattel/services/api && python -m compileall app && python -c \"from fastapi\\.testclient import TestClient; from app\\.main import app; client = TestClient\\(app\\); goal = client\\.post\\('/api/v1/goals', json=\\{'title':'Al-Fatihah','type':'verse-range','target':'Ayah 1-7','duration_minutes':15\\}\\); assert goal\\.status_code == 201, goal\\.text; goal_id = goal\\.json\\(\\)\\['id'\\]; plan = client\\.post\\(f'/api/v1/goals/\\{goal_id\\}/daily-plan'\\); assert plan\\.status_code == 200 and len\\(plan\\.json\\(\\)\\['items'\\]\\) == 3, plan\\.text; recitation = client\\.post\\('/api/v1/recitations', json=\\{'passage':'Al-Fatihah 1-7','audio_uri':'file:///tmp/recitation\\.m4a'\\}\\); assert recitation\\.status_code == 202, recitation\\.text; assert client\\.get\\(f\\\\\"/api/v1/recitations/\\{recitation\\.json\\(\\)\\['id'\\]\\}\\\\\"\\)\\.status_code == 200; print\\('API smoke test passed'\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/warattel/services/api && python -m pip install -r requirements\\.txt$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/warattel/services/api && python -m compileall -q app && python -c \"from fastapi\\.testclient import TestClient; from app\\.main import app; client = TestClient\\(app\\); goal = client\\.post\\('/api/v1/goals', json=\\{'title':'Al-Fatihah','type':'verse-range','target':'Ayah 1-7','duration_minutes':15\\}\\); assert goal\\.status_code == 201, goal\\.text; goal_id = goal\\.json\\(\\)\\['id'\\]; plan = client\\.post\\(f'/api/v1/goals/\\{goal_id\\}/daily-plan'\\); assert plan\\.status_code == 200 and len\\(plan\\.json\\(\\)\\['items'\\]\\) == 3, plan\\.text; recitation = client\\.post\\('/api/v1/recitations', json=\\{'passage':'Al-Fatihah 1-7','audio_uri':'file:///tmp/recitation\\.m4a'\\}\\); assert recitation\\.status_code == 202, recitation\\.text; assert client\\.get\\(f\\\\\"/api/v1/recitations/\\{recitation\\.json\\(\\)\\['id'\\]\\}\\\\\"\\)\\.status_code == 200; print\\('API smoke test passed'\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/home/codespace/.python/current/bin/python": true,
+        "/^cd /workspaces/warattel/services/api && python -m uvicorn app\\.main:app --host 0\\.0\\.0\\.0 --port 8000 --reload$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm start": true,
+        "/^cd /workspaces/warattel/services/api && python -m unittest discover -s tests -v$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/warattel/services/api && python - <<'PY'\nimport sys\nprint\\(sys\\.path\\[:5\\]\\)\nimport os\nprint\\(os\\.getcwd\\(\\)\\)\ntry:\n    import app\n    print\\('app ok', app\\)\n    import app\\.analysis\n    print\\('analysis ok', app\\.analysis\\)\nexcept Exception as e:\n    import traceback; traceback\\.print_exc\\(\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

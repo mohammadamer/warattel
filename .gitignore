@@ -1,0 +1,26 @@
+# Root
+node_modules/
+.npm/
+.env
+.env.*
+.DS_Store
+
+# Mobile app
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/web-build/
+apps/mobile/ios/Pods/
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+
+# Backend
+services/api/.venv/
+services/api/__pycache__/
+services/api/.pytest_cache/
+services/api/.mypy_cache/
+services/api/.ruff_cache/
+services/api/.env
+
+# Generic
+*.log
