@@ -9,8 +9,10 @@ The current product slice includes:
 - Microphone recording with local-first feedback
 - API-backed goal and daily-plan generation
 - Authenticated recitation uploads
-- SQLite-backed API storage
-- Background recitation job lifecycle
+- SQLite-backed API storage for goals and recitations
+- Durable async worker flow for recitation analysis
+- Storage abstraction with local filesystem fallback and S3-ready support
+- Worker health and monitoring endpoints
 - Offline fallback when the API is unavailable
 
 ## Repository layout
@@ -76,6 +78,11 @@ Expected response:
 Important endpoints:
 
 - `GET /health`
+- `GET /api/v1/status`
+- `GET /api/v1/worker/status`
+- `GET /api/v1/worker/health`
+- `GET /api/v1/worker/monitor`
+- `GET /api/v1/storage/status`
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/goals`
@@ -83,7 +90,7 @@ Important endpoints:
 - `POST /api/v1/recitations`
 - `GET /api/v1/recitations/{recitation_id}`
 
-The API uses SQLite by default at `services/api/data/warattel.db`. Uploaded audio is stored locally under `services/api/data/audio`.
+The API uses SQLite by default at `services/api/data/warattel.db`. Uploads are stored through a pluggable storage backend: local files under `services/api/data/audio` by default, or S3-compatible storage when `AWS_S3_BUCKET` is configured.
 
 ### 3. Start the worker
 
@@ -95,7 +102,7 @@ source .venv/bin/activate
 celery -A app.celery_app worker --loglevel=info
 ```
 
-The worker exposes a health signal on `GET /api/v1/worker/status` and can be used by the mobile app to show whether queue processing is live.
+The worker exposes a health signal on `GET /api/v1/worker/status` and a richer monitoring payload on `GET /api/v1/worker/monitor`. The mobile app can use these to show whether queue processing is live or whether the service is running in local fallback mode.
 
 ### 4. Configure the mobile API URL
 
@@ -143,20 +150,20 @@ cd ../../services/api
 python -m compileall -q app
 ```
 
-## Durable async worker
+## Durable async worker and storage abstraction
 
-Recitation analysis now runs through a background worker with durable queue semantics when Redis is available. The API enqueues a job, and the worker updates the SQLite record with the computed accuracy, confidence, and issue breakdown.
+Recitation analysis runs through a background worker when Redis is available. The API enqueues a job, and the worker updates the recitation record with the computed accuracy, confidence, and issue breakdown. Storage is handled by a backend abstraction so the same process can use local files during development or move to S3-compatible object storage in production.
 
 Local developer flow:
 
 ```bash
-# Terminal 1: API
+# Terminal 1: Redis
+redis-server
+
+# Terminal 2: API
 cd services/api
 source .venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Terminal 2: Redis
-redis-server
 
 # Terminal 3: worker
 cd services/api
@@ -164,10 +171,10 @@ source .venv/bin/activate
 celery -A app.celery_app worker --loglevel=info
 ```
 
-If Redis is unavailable, the service falls back to a local synchronous execution path so the app remains usable during development.
+If Redis is unavailable, the service falls back to a local execution path so the app remains usable during development while clearly reporting degraded status.
 
 ## Architecture status
 
 Product decisions are recorded in [docs/warattel-product-decisions.md](docs/warattel-product-decisions.md), the architecture plan is in [docs/warattel-architecture.md](docs/warattel-architecture.md), and domain terminology is in [CONTEXT.md](CONTEXT.md).
 
-The next production work is to replace local audio storage with object storage, move background processing to a durable worker such as Celery, isolate all records by authenticated user, and add real Quran alignment and recitation analysis.
+The next production work is to add real Quranic alignment and speech-recognition scoring, isolate all records by authenticated user, and tighten production observability around queue failures and storage health. The backend now already includes the durable worker foundation, monitoring, and S3-ready storage abstraction needed for that next step.
