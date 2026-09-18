@@ -22,16 +22,40 @@ docs/              Product and architecture decisions
 CONTEXT.md         Domain glossary
 ```
 
-## Run the API
+## Run locally
+
+You need Node.js with npm, Python 3.12 or newer, and either an Expo Go device/emulator or a browser. Run the API and mobile app in separate terminals.
+
+### 1. Start the API
+
+In Terminal 1:
 
 ```bash
 cd services/api
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 cp .env.example .env
-/home/codespace/.python/current/bin/python -m pip install -r requirements.txt
-/home/codespace/.python/current/bin/uvicorn app.main:app --reload
+
+# Load the local settings for the current shell.
+set -a
+source .env
+set +a
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The API is available at `http://localhost:8000`.
+Check that the API is running:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
 
 Important endpoints:
 
@@ -43,24 +67,43 @@ Important endpoints:
 - `POST /api/v1/recitations`
 - `GET /api/v1/recitations/{recitation_id}`
 
-The current API uses SQLite by default at `services/api/data/warattel.db`. Set `WARATTEL_DB_PATH` to change the location. Uploaded audio is stored locally under `services/api/data/audio`.
+The API uses SQLite by default at `services/api/data/warattel.db`. Uploaded audio is stored locally under `services/api/data/audio`.
 
-## Run the mobile app
+### 2. Configure the mobile API URL
+
+In Terminal 2:
 
 ```bash
 cd apps/mobile
 npm install
 cp .env.example .env
+```
+
+Set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` according to the target:
+
+- Web or iOS simulator: `http://localhost:8000/api/v1`
+- Android emulator: `http://10.0.2.2:8000/api/v1`
+- Physical device: `http://<your-computer-lan-ip>:8000/api/v1`
+
+For a physical device, the API must be started with `--host 0.0.0.0`, and the device must be able to reach the computer over the network.
+
+### 3. Start Expo
+
+```bash
 npm start
 ```
 
-Use `npm run ios`, `npm run android`, or `npm run web` for a target-specific launch. Configure `EXPO_PUBLIC_API_URL` for the target environment:
+Then choose one target:
 
-- iOS simulator: `http://localhost:8000/api/v1`
-- Android emulator: `http://10.0.2.2:8000/api/v1`
-- Physical device: use the API host machine's LAN IP
+```bash
+npm run web      # http://localhost:8081
+npm run android  # Android emulator or device
+npm run ios      # iOS simulator, macOS required
+```
 
-The mobile app supports account registration, sign-in, SecureStore token persistence, and a local offline entry path.
+Alternatively, scan the QR code shown by Expo with Expo Go. The app opens on the authentication screen; register or sign in to use API-backed features, or choose **Continue offline** to use the local fallback.
+
+The first run may prompt for microphone permission. Accept it to test the recitation recording flow and audio upload.
 
 ## Validate
 
