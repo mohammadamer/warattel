@@ -58,6 +58,7 @@ export function RecitationScreen() {
     const localResult: RecitationResult = {
       id: `recitation-${Date.now()}`,
       title: 'Latest recitation',
+      status: 'queued',
       accuracy: 0,
       confidence: 'low',
       summary: 'Audio captured. Analysis is pending until the recitation service processes this recording.',

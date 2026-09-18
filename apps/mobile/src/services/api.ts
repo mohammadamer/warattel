@@ -30,6 +30,20 @@ type ApiRecitation = {
   issues: RecitationResult['issues'];
 };
 
+export async function getRecitationStatus(recitationId: string): Promise<RecitationResult> {
+  const result = await request<ApiRecitation>(`/recitations/${recitationId}`);
+  return {
+    id: result.id,
+    title: 'Latest recitation',
+    status: result.status,
+    accuracy: result.accuracy ?? 0,
+    confidence: result.confidence ?? 'low',
+    summary: result.summary,
+    audioUri: result.audio_uri,
+    issues: result.issues,
+  };
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers);
   if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
@@ -79,6 +93,16 @@ export async function clearAccessToken() {
   await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
 }
 
+export async function getWorkerStatus(): Promise<{
+  mode: 'redis' | 'local-fallback';
+  overall: 'healthy' | 'degraded' | 'offline';
+  broker: string;
+  worker: string;
+  is_ready: boolean;
+}> {
+  return request('/worker/status');
+}
+
 export async function createGoalAndPlan(input: {
   title: string;
   type: GoalType;
@@ -118,6 +142,7 @@ export async function queueRecitation(input: {
   return {
     id: result.id,
     title: 'Latest recitation',
+    status: result.status,
     accuracy: result.accuracy ?? 0,
     confidence: result.confidence ?? 'low',
     summary: result.summary,

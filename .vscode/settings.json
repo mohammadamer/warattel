@@ -20,6 +20,14 @@
             "approve": true,
             "matchCommandLine": true
         },
-        "npm start": true
+        "npm start": true,
+        "/^cd /workspaces/warattel/services/api && python -m unittest discover -s tests -v$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/warattel/services/api && python - <<'PY'\nimport sys\nprint\\(sys\\.path\\[:5\\]\\)\nimport os\nprint\\(os\\.getcwd\\(\\)\\)\ntry:\n    import app\n    print\\('app ok', app\\)\n    import app\\.analysis\n    print\\('analysis ok', app\\.analysis\\)\nexcept Exception as e:\n    import traceback; traceback\\.print_exc\\(\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

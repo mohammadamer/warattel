@@ -1,14 +1,19 @@
+import os
 import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 
 from .auth import create_token, decode_token, hash_password, new_user_id, verify_password
 from .repository import Repository
 from .schemas import AuthCredentials, AuthResponse, DailyPlan, Goal, GoalCreate, PlanItem, RecitationResult
+from .storage import detect_storage_status, get_storage_backend
+from .tasks import process_recitation_task
+from .worker_monitor import detect_worker_monitor_snapshot
+from .worker_status import detect_worker_status
 
 app = FastAPI(title='Warattel API', version='0.1.0')
 
@@ -27,6 +32,45 @@ def health_check() -> dict[str, str]:
 @app.get('/api/v1/status')
 def api_status() -> dict[str, str]:
     return {'service': 'warattel-api', 'status': 'ready'}
+
+
+@app.get('/api/v1/worker/health')
+@app.get('/api/v1/worker/status')
+@app.get('/api/v1/workers/status')
+def worker_status() -> dict[str, object]:
+    status = detect_worker_status()
+    return {
+        'mode': status.mode,
+        'overall': status.overall,
+        'broker': status.broker,
+        'worker': status.worker,
+        'is_ready': status.is_ready,
+    }
+
+
+@app.get('/api/v1/worker/monitor')
+def worker_monitor() -> dict[str, object]:
+    snapshot = detect_worker_monitor_snapshot()
+    return {
+        'mode': snapshot.mode,
+        'is_healthy': snapshot.is_healthy,
+        'queue_size': snapshot.queue_size,
+        'active_workers': snapshot.active_workers,
+        'processed_jobs': snapshot.processed_jobs,
+        'failed_jobs': snapshot.failed_jobs,
+        'broker': snapshot.broker,
+    }
+
+
+@app.get('/api/v1/storage/status')
+def storage_status() -> dict[str, object]:
+    status = detect_storage_status()
+    return {
+        'mode': status.mode,
+        'bucket': status.bucket,
+        'public_base_url': status.public_base_url,
+        'is_ready': status.is_ready,
+    }
 
 
 @app.post('/api/v1/auth/register', response_model=AuthResponse, status_code=201)
@@ -99,9 +143,19 @@ def create_daily_plan(goal_id: str, _: str = Depends(current_user)) -> DailyPlan
     )
 
 
+def enqueue_recitation_analysis(recitation_id: str) -> None:
+    redis_url = os.getenv('REDIS_URL')
+    if redis_url:
+        try:
+            process_recitation_task.delay(recitation_id)
+            return
+        except Exception:
+            pass
+    process_recitation_task(recitation_id)
+
+
 @app.post('/api/v1/recitations', response_model=RecitationResult, status_code=202)
 def queue_recitation(
-    background_tasks: BackgroundTasks,
     passage: str = Form(..., min_length=1, max_length=160),
     audio: UploadFile = File(...),
     _: str = Depends(current_user),
@@ -112,20 +166,20 @@ def queue_recitation(
     recitation_id = str(uuid4())
     file_extension = Path(audio.filename or 'recitation.m4a').suffix.lower() or '.m4a'
     stored_filename = f'{recitation_id}{file_extension}'
-    stored_path = audio_directory / stored_filename
-    with stored_path.open('wb') as output:
-        output.write(audio.file.read())
+    storage_backend = get_storage_backend()
+    storage_backend.save_upload(stored_filename, audio.file, audio.content_type)
+    audio_uri = storage_backend.get_public_url(stored_filename)
 
     result = RecitationResult(
         id=recitation_id,
         passage=passage,
-        audio_uri=f'/media/{stored_filename}',
+        audio_uri=audio_uri,
         status='queued',
         summary='Audio received. Analysis is queued for alignment and feedback.',
         issues=[],
     )
     repository.create_recitation(result)
-    background_tasks.add_task(process_recitation, result.id)
+    enqueue_recitation_analysis(result.id)
     return result
 
 
@@ -136,17 +190,3 @@ def get_recitation(recitation_id: str, _: str = Depends(current_user)) -> Recita
         raise HTTPException(status_code=404, detail='Recitation not found')
     return result
 
-
-def process_recitation(recitation_id: str) -> None:
-    result = repository.get_recitation(recitation_id)
-    if result is None:
-        return
-    repository.update_recitation(
-        result.model_copy(
-            update={
-                'status': 'complete',
-                'confidence': 'low',
-                'summary': 'Audio stored. Word-level alignment is ready for the analysis worker.',
-            }
-        )
-    )

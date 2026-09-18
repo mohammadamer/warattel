@@ -18,9 +18,12 @@ export type GoalDraft = {
   duration: string;
 };
 
+export type RecitationStatus = 'queued' | 'processing' | 'complete';
+
 export type RecitationResult = {
   id: string;
   title: string;
+  status?: RecitationStatus;
   accuracy: number;
   confidence: 'high' | 'medium' | 'low';
   summary: string;

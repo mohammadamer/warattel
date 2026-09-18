@@ -22,8 +22,11 @@ export const useAppStore = create<AppState>((set) => ({
   latestRecitation: null,
   setDailyPlan: (items) => set({ dailyPlan: items }),
   setLatestRecitation: (result) =>
-    set((state) => ({
-      latestRecitation: result,
-      recentRecitations: [result, ...state.recentRecitations],
-    })),
+    set((state) => {
+      const recentRecitations = [result, ...state.recentRecitations.filter((item) => item.id !== result.id)];
+      return {
+        latestRecitation: result,
+        recentRecitations: recentRecitations.slice(0, 8),
+      };
+    }),
 }));

@@ -26,9 +26,25 @@ CONTEXT.md         Domain glossary
 
 You need Node.js with npm, Python 3.12 or newer, and either an Expo Go device/emulator or a browser. Run the API and mobile app in separate terminals.
 
-### 1. Start the API
+### 1. Start Redis
 
-In Terminal 1:
+Install Redis locally if it is not already present:
+
+```bash
+# Ubuntu / Debian
+sudo apt-get update
+sudo apt-get install -y redis-server
+```
+
+Then start the Redis broker in Terminal 1:
+
+```bash
+redis-server
+```
+
+### 2. Start the API
+
+In Terminal 2:
 
 ```bash
 cd services/api
@@ -69,9 +85,21 @@ Important endpoints:
 
 The API uses SQLite by default at `services/api/data/warattel.db`. Uploaded audio is stored locally under `services/api/data/audio`.
 
-### 2. Configure the mobile API URL
+### 3. Start the worker
 
-In Terminal 2:
+In Terminal 3:
+
+```bash
+cd services/api
+source .venv/bin/activate
+celery -A app.celery_app worker --loglevel=info
+```
+
+The worker exposes a health signal on `GET /api/v1/worker/status` and can be used by the mobile app to show whether queue processing is live.
+
+### 4. Configure the mobile API URL
+
+In Terminal 4:
 
 ```bash
 cd apps/mobile
@@ -87,7 +115,7 @@ Set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` according to the target:
 
 For a physical device, the API must be started with `--host 0.0.0.0`, and the device must be able to reach the computer over the network.
 
-### 3. Start Expo
+### 5. Start Expo
 
 ```bash
 npm start
@@ -114,6 +142,29 @@ npx tsc --noEmit
 cd ../../services/api
 python -m compileall -q app
 ```
+
+## Durable async worker
+
+Recitation analysis now runs through a background worker with durable queue semantics when Redis is available. The API enqueues a job, and the worker updates the SQLite record with the computed accuracy, confidence, and issue breakdown.
+
+Local developer flow:
+
+```bash
+# Terminal 1: API
+cd services/api
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2: Redis
+redis-server
+
+# Terminal 3: worker
+cd services/api
+source .venv/bin/activate
+celery -A app.celery_app worker --loglevel=info
+```
+
+If Redis is unavailable, the service falls back to a local synchronous execution path so the app remains usable during development.
 
 ## Architecture status
 
